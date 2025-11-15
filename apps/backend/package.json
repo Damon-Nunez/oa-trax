@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1", 
+    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "next dev"
   },
   "keywords": [],
@@ -14,6 +14,8 @@
     "prisma": "^6.19.0"
   },
   "dependencies": {
-    "@prisma/client": "^6.19.0"
+    "@prisma/client": "^6.19.0",
+    "bcrypt": "^6.0.0",
+    "openai": "^6.9.0"
   }
 }

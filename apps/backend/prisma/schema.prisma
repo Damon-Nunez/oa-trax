@@ -18,4 +18,15 @@ model Chat {
   createdAt DateTime @default(now())
   prompt    String
   response  String
+  userId String?
+  user   User? @relation(fields: [userId], references: [id])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique 
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  chats     Chat[]
 }
