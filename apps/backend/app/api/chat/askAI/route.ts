@@ -60,11 +60,9 @@ export async function POST(req: Request) {
       });
     }
 
-    // 🔥 NEW: Get sessionId from query
     const { searchParams } = new URL(req.url);
     let sessionId = searchParams.get("sessionId");
 
-    // 🔥 If no sessionId provided, create a new session automatically
     if (!sessionId) {
       const newSession = await prisma.chatSession.create({
         data: {
@@ -75,10 +73,9 @@ export async function POST(req: Request) {
       sessionId = newSession.id;
     }
 
-    // 1) Get AI response (your existing logic)
     const aiResponse = await getAIResponse(prompt);
 
-    // 2) Save chat message in session
+ 
     const savedChat = await prisma.chat.create({
       data: {
         userId,
@@ -88,7 +85,7 @@ export async function POST(req: Request) {
       },
     });
 
-    // 🔥 If this is the FIRST message, update title
+
     await prisma.chatSession.update({
       where: { id: sessionId },
       data: {
