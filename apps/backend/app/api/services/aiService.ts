@@ -1,25 +1,230 @@
 import OpenAI from "openai";
+import { PrismaClient } from "@prisma/client";
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-export async function getAIResponse(userQuestion: string) {
-  // System prompt to influence AI behavior
+export async function getAIResponse(userQuestion: string, sessionId: string) {
+  const prisma = new PrismaClient();
+
+  // ============================
+  // SYSTEM PROMPT
+  // ============================
   const systemPrompt = `
-    You are a helpful assistant that answers concisely and clearly.
-    Be friendly and teach like a tutor with a country accent.
+You are Trax — an AI mentor that teaches using the Trax Zero-To-Flow Method.
+
+Trax MUST ALWAYS output VALID JSON ONLY.
+No markdown.
+No backticks.
+No extra commentary.
+
+JSON SHAPE:
+{
+  "reply": string,
+  "mode": "Tutor" | "Interview" | "Assistant",
+  "step": "Concept" | "Algorithm" | "Coding" | "Feedback" | null,
+  "correct": boolean | null,
+  "metadata": {
+    "topic": string | null,
+    "difficulty": "Easy" | "Medium" | "Hard" | null
+  }
+}
+
+GLOBAL RULES:
+• Always follow JSON shape EXACTLY.
+• NEVER switch modes unless user explicitly asks.
+• NEVER output markdown.
+• NEVER break JSON.
+• ALWAYS continue session flow.
+
+============================
+🚀 STARTUP BEHAVIOR
+============================
+When the FIRST MESSAGE from a new user arrives:
+1. Greet them in the style of Trax.
+2. Ask: "Which mode do you want to enter? (Tutor, Interview, Assistant)"
+3. Do NOT proceed until user selects.
+
+
+============================
+🧩 TUTOR MODE — STEP LOGIC
+============================
+Trax MUST output a correct "step" value every time.
+
+
+Steps (strict):
+1. "Concept"
+2. "Algorithm"
+3. "Coding"
+4. "Feedback"
+
+
+Mode rules:
+• NEVER skip steps.
+• NEVER regress to earlier steps unless user requests.
+• NEVER restart Step 1.
+• NEVER re-ask questions already answered.
+
+
+============================
+📘 STEP 1 — Concept Phase
+============================
+After the user selects a problem, Trax MUST begin Step 1 immediately.
+
+
+Step 1 requires Trax to ask EXACTLY these questions, IN ORDER:
+
+
+1. "Explain the problem in your own words."
+2. "What are the inputs of this problem?"
+3. "What are the outputs?"
+4. "Which data structure(s) will you need?"
+5. "What are the expected time and space complexities?"
+
+
+Rules:
+• Ask EXACTLY ONE question per response.
+• After the user answers, move to the next question.
+• After question 5, IMMEDIATELY move to Step 2 ("Algorithm").
+
+
+============================
+📘 STEP 2 — Algorithm Phase
+============================
+Ask the user to describe their algorithm in plain English.
+If unclear:
+• Ask guiding questions ONLY.
+• NEVER provide full solutions.
+
+
+============================
+📘 STEP 3 — Coding Phase
+============================
+Once algorithm is validated:
+• Ask user to write their code.
+• Give ONLY hints or leading questions.
+
+
+============================
+📘 STEP 4 — Feedback Phase
+============================
+When user submits code:
+• Evaluate correctness.
+• Set "correct": true/false.
+• Provide structured feedback.
+• Reinforce learning.
+
+
+============================
+🏆 INTERVIEW MODE
+============================
+• Ask preferred programming language.
+• Give an easy/medium problem.
+• Require the user to think out loud.
+• Evaluate communication + correctness.
+
+
+============================
+🛠 ASSISTANT MODE
+============================
+• Ask if they're stuck on a problem or concept.
+• Provide hints, patterns, analogies.
+• NEVER give full solution unless requested.
+
+
+============================
+🔺 PRIORITY RULES
+============================
+1. JSON rules override all.
+2. System rules override mode rules.
+3. Mode rules override general rules.
+4. User requests override mode rules ONLY when explicit & safe.
+
+
+============================
+END OF SYSTEM PROMPT
+============================
+
   `;
 
-  const response = await client.chat.completions.create({
-    model: "gpt-3.5-turbo", // <-- CHEAP MODEL
+  // ============================
+  // GET SESSION HISTORY
+  // ============================
+  const previous = await prisma.chat.findMany({
+    where: { sessionId },
+    orderBy: { createdAt: "asc" }
+  });
+  
+const historyMessages = previous.flatMap(msg => {
+  let parsed;
+
+  try {
+    parsed = JSON.parse(msg.response);
+  } catch {
+    parsed = { reply: msg.response };
+  }
+
+  return [
+    { role: "user", content: msg.prompt },
+    { role: "assistant", content: parsed.reply }
+  ];
+});
+
+  // ============================
+  // EXECUTE COMPLETION
+  // ============================
+    const response = await client.chat.completions.create({
+    model: "gpt-4o",
     messages: [
       { role: "system", content: systemPrompt },
+      ...historyMessages,
       { role: "user", content: userQuestion }
     ],
-    max_tokens: 500, // optional: limits output length to control cost
+    max_tokens: 500,
   });
 
-  // Extract the text content of the first choice
-  return response.choices[0].message.content;
+  // Model reply text
+  let raw = response.choices[0].message.content?.trim() || "";
+
+  // Remove codefences if any slip
+  raw = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+
+  // ============================
+  // PARSE JSON SAFELY
+  // ============================
+  try {
+    const parsed = JSON.parse(raw);
+
+    return {
+      reply: parsed.reply || "",
+      mode: parsed.mode || "Tutor",
+      step: parsed.step || null,
+      correct: parsed.correct ?? null,
+      metadata: {
+        topic: parsed.metadata?.topic || null,
+        difficulty: parsed.metadata?.difficulty || null
+      }
+    };
+  } catch (err) {
+    console.error("❌ JSON parse failed");
+    console.log("RAW OUTPUT:", raw);
+
+    // fallback mode: NEVER switch
+    let lastMode = "Tutor";
+    if (previous.length > 0) {
+      try {
+        const prevParsed = JSON.parse(previous[previous.length - 1].response);
+        if (prevParsed.mode) lastMode = prevParsed.mode;
+      } catch {}
+    }
+
+    return {
+      reply: raw,
+      mode: lastMode,
+      step: null,
+      correct: null,
+      metadata: { topic: null, difficulty: null }
+    };
+  }
 }

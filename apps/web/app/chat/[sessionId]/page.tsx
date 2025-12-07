@@ -8,9 +8,18 @@ export default function ChatSessionPage() {
   const { sessionId } = useParams();
   const router = useRouter();
 
-  const [messages, setMessages] = useState<
-    { id: string; text: string; from: "user" | "bot" | "system" }[]
-  >([]);
+const [messages, setMessages] = useState<
+  {
+    id: string;
+    text: string;
+    from: "user" | "bot" | "system";
+    mode?: string | null;
+    step?: string | null;
+    correct?: boolean | null;
+    metadata?: any | null;
+  }[]
+>([]);
+
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -30,95 +39,149 @@ export default function ChatSessionPage() {
       return;
     }
 
-    const loadHistory = async () => {
-      try {
-        const res = await axios.get(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/chat/sessions/${sessionId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        const loadedMessages = [];
-
-        for (const chat of res.data.chats) {
-          loadedMessages.push({
-            id: chat.id + "-u",
-            text: chat.prompt,
-            from: "user" as const,
-          });
-          loadedMessages.push({
-            id: chat.id + "-b",
-            text: chat.response,
-            from: "bot" as const,
-          });
-        }
-
-        // Add system message at top ONCE
-        if (loadedMessages.length === 0) {
-          loadedMessages.unshift({
-            id: "system-welcome",
-            text: "Welcome to OA Trax!",
-            from: "system" as const,
-          });
-        }
-
-        setMessages(loadedMessages);
-      } catch (err) {
-        console.error("Error loading history:", err);
+   const loadHistory = async () => {
+  try {
+    const res = await axios.get(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/chat/sessions/${sessionId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }
-    };
+    );
+
+    const loadedMessages = [];
+
+    for (const chat of res.data.chats) {
+      
+      // USER MESSAGE
+      loadedMessages.push({
+        id: chat.id + "-u",
+        text: chat.prompt,
+        from: "user" as const,
+        mode: null,
+        step: null,
+        correct: null,
+        metadata: null
+      });
+
+      // BOT MESSAGE (JSON PARSED)
+      let parsedResponse = null;
+
+      try {
+        parsedResponse = JSON.parse(chat.response);
+      } catch (err) {
+        console.error("Failed to parse AI JSON:", chat.response);
+        // Fallback to plain text if AI ever slipped
+        parsedResponse = {
+          reply: chat.response,
+          mode: "Assistant",
+          step: null,
+          correct: null,
+          metadata: null
+        };
+      }
+
+      loadedMessages.push({
+        id: chat.id + "-b",
+        text: parsedResponse.reply,
+        from: "bot" as const,
+        mode: parsedResponse.mode,
+        step: parsedResponse.step,
+        correct: parsedResponse.correct,
+        metadata: parsedResponse.metadata
+      });
+    }
+
+    // If session empty, add system message
+    if (loadedMessages.length === 0) {
+      loadedMessages.unshift({
+        id: "system-welcome",
+        text: "Welcome to OA Trax!",
+        from: "system" as const,
+        mode: null,
+        step: null,
+        correct: null,
+        metadata: null
+      });
+    }
+
+    setMessages(loadedMessages);
+
+  } catch (err) {
+    console.error("Error loading history:", err);
+  }
+};
+
 
     loadHistory();
   }, [sessionId, token, router]);
 
   // Ask AI
-  const getBotResponse = async (userInput: string) => {
-    try {
-      const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/chat/askAI?sessionId=${sessionId}`,
-        { prompt: userInput },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+const getBotResponse = async (userInput: string) => {
+  try {
+    const res = await axios.post(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/chat/askAI?sessionId=${sessionId}`,
+      { prompt: userInput },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-      return res.data.aiResponse;
-    } catch (error) {
-      console.error("Error fetching bot response:", error);
-      return "Sorry, something went wrong.";
-    }
-  };
+       console.log("🔍 FULL AI RESPONSE (Frontend):", res.data.aiResponse);
+
+       
+    return res.data.aiResponse; // <-- Already parsed JSON from backend
+    
+  } catch (error) {
+    console.error("Error fetching bot response:", error);
+    return {
+      reply: "Sorry, something went wrong.",
+      mode: "Assistant",
+      step: null,
+      correct: null,
+      metadata: null,
+    };
+  }
+};
+
 
   // Send message
   const handleSend = async () => {
     if (!input.trim() || loading) return;
 
-    const userMessage = {
-      id: crypto.randomUUID(),
-      text: input,
-      from: "user" as const,
-    };
+    const userMessage ={
+  id: crypto.randomUUID(),
+  text: input,
+  from: "user" as const,
+  mode: null,
+  step: null,
+  correct: null,
+  metadata: null
+}
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
 
-    const aiReply = await getBotResponse(input);
+  const aiReply = await getBotResponse(input);
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        text: aiReply,
-        from: "bot" as const,
-      },
-    ]);
+setMessages((prev) => [
+  ...prev,
+  {
+    id: crypto.randomUUID(),
+    text: aiReply.reply,
+    from: "bot" as const,
+    mode: aiReply.mode,
+    step: aiReply.step,
+    correct: aiReply.correct,
+    metadata: aiReply.metadata
+  },
+]);
+
 
     setLoading(false);
   };

@@ -31,15 +31,9 @@ const corsHeaders = {
  * OPTIONS (Preflight)
  * -------------------------------------------------- */
 export async function OPTIONS() {
-    return new Response(null, {
-        status: 204,
-        headers: corsHeaders,
-    });
+  return new Response(null, { status: 204, headers: corsHeaders });
 }
 
-/** --------------------------------------------------
- * POST — Create Chat
- * -------------------------------------------------- */
 export async function POST(req: Request) {
   try {
     const { prompt } = await req.json();
@@ -49,74 +43,62 @@ export async function POST(req: Request) {
     if (!userId) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: corsHeaders,
+        headers: corsHeaders
       });
     }
 
     if (!prompt) {
       return new Response(JSON.stringify({ error: "Prompt is required." }), {
         status: 400,
-        headers: corsHeaders,
+        headers: corsHeaders
       });
     }
 
+    // Extract sessionId from URL
     const { searchParams } = new URL(req.url);
     let sessionId = searchParams.get("sessionId");
 
+    // Create new session if none exists
     if (!sessionId) {
-      const newSession = await prisma.chatSession.create({
-        data: {
-          userId,
-          title: prompt, // first message becomes session title
-        },
+      const session = await prisma.chatSession.create({
+        data: { userId, title: prompt }
       });
-      sessionId = newSession.id;
+      sessionId = session.id;
     }
 
-    const aiResponse = await getAIResponse(prompt);
+    // Generate AI response (with full memory)
+    const aiResponse = await getAIResponse(prompt, sessionId);
 
- 
-    const savedChat = await prisma.chat.create({
+    // Save user + bot messages
+    const saved = await prisma.chat.create({
       data: {
         userId,
-        prompt,
-        response: aiResponse,
         sessionId,
-      },
-    });
-
-
-    await prisma.chatSession.update({
-      where: { id: sessionId },
-      data: {
-        title: prompt, // overwrite only if empty
-      },
+        prompt,
+        response: JSON.stringify(aiResponse)   // 🔥 Save JSON as string
+      }
     });
 
     return new Response(
       JSON.stringify({
         success: true,
-        prompt,
         aiResponse,
-        sessionId, // return so frontend always knows which session to continue
-        metadata: { savedId: savedChat.id, createdAt: savedChat.createdAt },
+        sessionId,
+        metadata: { savedId: saved.id }
       }),
-      {
-        status: 200,
-        headers: corsHeaders,
-      }
+      { status: 200, headers: corsHeaders }
     );
-  } catch (error) {
-    console.error("Error creating chat:", error);
+
+  } catch (err) {
+    console.error("Error in POST /askAI:", err);
     return new Response(JSON.stringify({ error: "Internal Server Error" }), {
       status: 500,
-      headers: corsHeaders,
+      headers: corsHeaders
     });
   } finally {
     await prisma.$disconnect();
   }
 }
-
 
 /** --------------------------------------------------
  * GET — Get Chat History
