@@ -7,6 +7,8 @@
   .animate-message-user {
     animation: messageUser 0.25s ease-out;
   }
+}
+
 
   .animate-message-bot {
     animation: messageBot 0.25s ease-out;
@@ -33,7 +35,6 @@
       transform: translateX(0) translateY(0);
     }
   }
-}
 
 .mode-Tutor {
   background: #0c0e11;
@@ -48,4 +49,18 @@
 .mode-Assistant {
   background: linear-gradient(to bottom, #004aad, #001f4d);
   transition: background 0.6s ease;
+}
+@keyframes modeSwap {
+  0% {
+    opacity: 0.3;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0px);
+  }
+}
+
+.mode-animate {
+  animation: modeSwap 0.6s ease-out;
 }
