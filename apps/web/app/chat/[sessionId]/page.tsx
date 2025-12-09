@@ -4,9 +4,12 @@ import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
 
+
 export default function ChatSessionPage() {
   const { sessionId } = useParams();
   const router = useRouter();
+
+
 
 const [messages, setMessages] = useState<
   {
@@ -269,10 +272,12 @@ setMessages((prev) => [
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+<div className="flex flex-col h-screen bg-gray-900 text-gray-100">
+
 
       {/* MODE SELECTOR (temp UI) */}
-<div className="p-3 bg-white border-b flex justify-end">
+<div className="p-3 bg-[#111] border-b border-gray-800 flex justify-end">
+
   <select
     value={userMode}
     onChange={async (e) => {
@@ -289,7 +294,16 @@ setMessages((prev) => [
         console.error("Error updating mode:", err);
       }
     }}
-    className="border rounded px-2 py-1"
+className="
+  border border-gray-700 
+  bg-[#1e1e1e] 
+  text-gray-200 
+  rounded px-2 py-1 
+  focus:outline-none 
+  focus:ring-1 
+  focus:ring-blue-500 
+  cursor-pointer
+"
   >
     <option value="Tutor">Tutor</option>
     <option value="Interview">Interview</option>
@@ -298,32 +312,42 @@ setMessages((prev) => [
 </div>
 
       {/* Messages container */}
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col space-y-2">
+     <div className="flex-1 overflow-y-auto p-6 flex flex-col space-y-3 bg-gray-900">
 
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${
-              msg.from === "user"
-                ? "justify-end"
-                : msg.from === "system"
-                ? "justify-center"
-                : "justify-start"
-            }`}
-          >
-            <div
-              className={`p-2 rounded max-w-xs break-words ${
-                msg.from === "user"
-                  ? "bg-blue-500 text-white"
-                  : msg.from === "system"
-                  ? "bg-gray-300 text-black"
-                  : "bg-gray-200 text-black"
-              }`}
-            >
-              {msg.text}
-            </div>
-          </div>
-        ))}
+
+       {messages.map((msg) => (
+  <div
+    key={msg.id}
+    className={`flex ${
+      msg.from === "user"
+        ? "justify-end"
+        : msg.from === "system"
+        ? "justify-center"
+        : "justify-start"
+    }`}
+  >
+    <div className={`
+      px-4 py-3 
+      rounded-2xl 
+      max-w-md 
+      break-words 
+      shadow-lg 
+      transition-all 
+      duration-200
+
+      ${
+        msg.from === "user"
+          ? "bg-[#3b3b3b] text-white self-end shadow-[0_0_10px_rgba(0,0,0,0.4)]"
+          : msg.from === "system"
+          ? "bg-[#555] text-white mx-auto shadow-[0_0_10px_rgba(0,0,0,0.35)]"
+          : "bg-[#2e2e2e] text-gray-200 shadow-[0_0_10px_rgba(0,0,0,0.35)]"
+      }
+    `}>
+      {msg.text}
+    </div>
+  </div>
+))}
+
 
         {loading && (
           <div className="flex justify-start">
@@ -341,48 +365,112 @@ setMessages((prev) => [
 <div className="relative">
   {/* Timer Tray (only visible when expanded) */}
  {showTimerTray && (
-  <div className="absolute bottom-full left-0 right-0 bg-white border-t border-l border-r shadow-lg p-4 animate-slide-up">
+<div className="
+  absolute 
+  bottom-full left-4 right-4 
+  bg-[#111] 
+  border border-gray-800 
+  shadow-xl 
+  p-4 
+  rounded-xl 
+  animate-slide-up 
+  space-y-3
+">
     <h3 className="font-semibold mb-2">Timer</h3>
 
     {/* Preset buttons */}
-    <div className="flex gap-2 mb-3">
-      <button
-        className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-        onClick={() => setTimeLeft(5 * 60)}
-      >
-        5 min
-      </button>
-      <button
-        className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-        onClick={() => setTimeLeft(10 * 60)}
-      >
-        10 min
-      </button>
-      <button
-        className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-        onClick={() => setTimeLeft(20 * 60)}
-      >
-        20 min
-      </button>
-    </div>
+{/* Preset buttons */}
+{/* Pill-style preset buttons */}
+<div className="flex mb-3">
+  <button
+    className="
+      px-4 py-1.5 
+      bg-[#1f1f1f] 
+      text-gray-200 
+      rounded-l-lg 
+      border border-gray-700 
+      hover:bg-[#2b2b2b] 
+      transition
+    "
+    onClick={() => setTimeLeft(5 * 60)}
+  >
+    5 min
+  </button>
+
+  <button
+    className="
+      px-4 py-1.5 
+      bg-[#1f1f1f] 
+      text-gray-200 
+      border-t border-b border-gray-700 
+      hover:bg-[#2b2b2b] 
+      transition
+    "
+    onClick={() => setTimeLeft(10 * 60)}
+  >
+    10 min
+  </button>
+
+  <button
+    className="
+      px-4 py-1.5 
+      bg-[#1f1f1f] 
+      text-gray-200 
+      rounded-r-lg 
+      border border-gray-700 
+      hover:bg-[#2b2b2b] 
+      transition
+    "
+    onClick={() => setTimeLeft(20 * 60)}
+  >
+    20 min
+  </button>
+</div>
+
+
 
     {/* Custom time entry */}
     <div className="flex items-center gap-2 mb-3">
-      <input
-        type="number"
-        placeholder="min"
-        value={customMinutes}
-        onChange={(e) => setCustomMinutes(e.target.value)}
-        className="w-16 border rounded px-2 py-1"
-      />
-      <span>:</span>
-      <input
-        type="number"
-        placeholder="sec"
-        value={customSeconds}
-        onChange={(e) => setCustomSeconds(e.target.value)}
-        className="w-16 border rounded px-2 py-1"
-      />
+    <input
+  type="number"
+  placeholder="min"
+  value={customMinutes}
+  onChange={(e) => setCustomMinutes(e.target.value)}
+  className="
+    w-16 
+    bg-[#0f0f0f] 
+    text-gray-200 
+    border border-gray-700 
+    rounded-lg 
+    px-2 py-1 
+    appearance-none 
+    placeholder-gray-500 
+    focus:outline-none 
+    focus:ring-1 
+    focus:ring-blue-500
+  "
+/>
+
+<input
+  type="number"
+  placeholder="sec"
+  value={customSeconds}
+  onChange={(e) => setCustomSeconds(e.target.value)}
+  className="
+    w-16 
+    bg-[#0f0f0f] 
+    text-gray-200 
+    border border-gray-700 
+    rounded-lg 
+    px-2 py-1 
+    appearance-none 
+    placeholder-gray-500 
+    focus:outline-none 
+    focus:ring-1 
+    focus:ring-blue-500
+  "
+/>
+
       <button
         className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
         onClick={() => {
@@ -428,15 +516,15 @@ setMessages((prev) => [
 )}
 
   {/* INPUT BAR */}
-  <div className="p-4 border-t bg-white flex items-center gap-2">
+<div className="p-4 border-t border-gray-800 bg-[#111] flex items-center gap-3 shadow-[0_-2px_10px_rgba(0,0,0,0.4)]">
     {/* Timer Icon */}
-    <button
-      onClick={() => setShowTimerTray((prev) => !prev)}
-      className="text-gray-600 hover:text-gray-900 px-2"
-      title="Timer"
-    >
-      🕒
-    </button>
+<button
+  onClick={() => setShowTimerTray((prev) => !prev)}
+  className="text-gray-300 hover:text-white px-2 text-xl transition-transform hover:scale-110"
+  title="Timer"
+>
+  🕒
+</button>
 
     {/* Countdown Pill (collapsed view) */}
     {timeLeft > 0 && !showTimerTray && (
@@ -452,12 +540,35 @@ setMessages((prev) => [
       onChange={(e) => setInput(e.target.value)}
       onKeyDown={handleKeyDown}
       autoFocus
-      className="flex-1 border rounded px-3 py-2 focus:outline-none focus:ring"
+className="
+  flex-1 
+  bg-[#0f0f0f] 
+  border border-gray-700 
+  rounded-xl 
+  px-4 py-3 
+  text-gray-200 
+  placeholder-gray-500 
+  shadow-inner 
+  focus:outline-none 
+  focus:ring-2 
+  focus:ring-blue-600 
+  transition-all
+"
+
     />
 
     <button
       onClick={handleSend}
-      className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+className="
+  bg-blue-600 
+  text-white 
+  px-5 py-2.5 
+  rounded-xl 
+  hover:bg-blue-500 
+  transition-all 
+  shadow-lg 
+  hover:shadow-blue-500/20
+"
       disabled={loading}
     >
       Send

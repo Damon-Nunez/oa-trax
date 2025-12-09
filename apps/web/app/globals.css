@@ -1,3 +1,51 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+@layer utilities {
+  .animate-message-user {
+    animation: messageUser 0.25s ease-out;
+  }
+
+  .animate-message-bot {
+    animation: messageBot 0.25s ease-out;
+  }
+
+  @keyframes messageUser {
+    0% {
+      opacity: 0;
+      transform: translateX(20px) translateY(4px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0) translateY(0);
+    }
+  }
+
+  @keyframes messageBot {
+    0% {
+      opacity: 0;
+      transform: translateX(-20px) translateY(4px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0) translateY(0);
+    }
+  }
+}
+
+.mode-Tutor {
+  background: #0c0e11;
+  transition: background 0.6s ease;
+}
+
+.mode-Interview {
+  background: linear-gradient(to bottom, #000000, #003b1f);
+  transition: background 0.6s ease;
+}
+
+.mode-Assistant {
+  background: linear-gradient(to bottom, #004aad, #001f4d);
+  transition: background 0.6s ease;
+}

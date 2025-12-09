@@ -25,9 +25,22 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
 
   const router = useRouter();
   const pathname = usePathname();
+  
 
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+    function cleanPreview(text) {
+  try {
+    // If it's JSON, parse and extract "reply" or "text"
+    const obj = JSON.parse(text);
+    return obj.reply || obj.text || text;
+  } catch {
+    // If not JSON, fallback to plain text
+    return text;
+  }
+}
+
 
   // Fetch all sessions for sidebar
   const loadSessions = async () => {
@@ -142,15 +155,8 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
       )}
 
       {/* SIDEBAR */}
-      <aside
-        className={`
-          bg-gray-900 text-gray-100 p-4 flex flex-col border-r border-gray-800
-          w-64 h-full z-30 transform transition-transform duration-300
-          ${mobileOpen ? "translate-x-0" : "-translate-x-full"} 
-          lg:translate-x-0 lg:static lg:flex
-          fixed top-0 left-0
-        `}
-      >
+      <aside className="bg-[#0a1a2b] text-gray-100 p-4 flex flex-col border-r border-[#05101a] w-72">
+
         {/* Close button for mobile */}
         <button
           className="lg:hidden mb-3 text-left text-gray-300"
@@ -197,11 +203,14 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
       {s.title || "New Chat"}
     </p>
 
-    {s.lastMessage && (
-      <p className="text-xs text-gray-400 truncate">
-        {s.lastMessage}
-      </p>
-    )}
+ {s.lastMessage && (
+  <p className="text-xs text-gray-400 truncate">
+    {typeof s.lastMessage === "string"
+      ? cleanPreview(s.lastMessage)
+      : cleanPreview(JSON.stringify(s.lastMessage))}
+  </p>
+)}
+
   </Link>
 
   {/* RIGHT SIDE: THREE DOTS */}
@@ -216,7 +225,20 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   </button>
                 {/* DROPDOWN */}
                 {menuOpenId === s.id && (
-                  <div className="absolute right-0 mt-8 bg-gray-800 text-gray-200 rounded shadow-lg z-50 p-2">
+               <div
+    className="
+      absolute 
+      right-2 
+      top-8 
+      bg-[#111] 
+      border border-gray-700 
+      rounded-lg 
+      shadow-lg 
+      p-2 
+      text-sm
+      z-50
+    "
+  >
                     <button
                       className="w-full text-left hover:bg-red-600 hover:text-white p-1 rounded"
                       onClick={() => {
@@ -244,7 +266,9 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
       </aside>
 
       {/* MAIN CHAT AREA */}
-      <main className="flex-1 overflow-hidden">{children}</main>
+     <main className="flex-1 bg-[#0c0e11] text-gray-200 p-4 overflow-hidden">
+          {children}
+          </main>
 
       {/* CONFIRMATION POPUP */}
       {showDeleteConfirm && (
