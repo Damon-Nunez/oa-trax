@@ -4,54 +4,64 @@ import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+// ⭐ OPTIONS (preflight)
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
+
+// ⭐ POST — Create User
 export async function POST(req: Request) {
   try {
     const { username, email, password } = await req.json();
 
-    // Validate required fields
     if (!username || !email || !password) {
-      return NextResponse.json(
-        { error: "Username, email, and password are required." },
-        { status: 400 }
-      );
+      return new Response(JSON.stringify({ error: "All fields required" }), {
+        status: 400,
+        headers: corsHeaders,
+      });
     }
 
-    // Check if email already exists
-    const emailCheck = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (emailCheck) {
-      return NextResponse.json(
-        { error: "Email already exists." },
-        { status: 400 }
-      );
+    // Check existing email
+    const exists = await prisma.user.findUnique({ where: { email } });
+    if (exists) {
+      return new Response(JSON.stringify({ error: "Email already in use" }), {
+        status: 400,
+        headers: corsHeaders,
+      });
     }
 
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash password
+    const hashed = await bcrypt.hash(password, 10);
 
-    // Create the new user
-    const newUser = await prisma.user.create({
+    // Create user
+    await prisma.user.create({
       data: {
         username,
         email,
-        password: hashedPassword,
+        password: hashed,
       },
     });
 
-    // Return success response
-    return NextResponse.json(
-      { message: "User created successfully!", user: newUser },
-      { status: 201 }
+    return new Response(
+      JSON.stringify({ message: "User created successfully!" }),
+      { status: 201, headers: corsHeaders }
     );
-
   } catch (error) {
-    console.error("Error creating a User", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Signup Error:", error);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: corsHeaders,
+    });
   } finally {
     await prisma.$disconnect();
   }

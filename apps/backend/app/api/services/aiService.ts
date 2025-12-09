@@ -9,6 +9,25 @@ export async function getAIResponse(userQuestion: string, sessionId: string) {
   const prisma = new PrismaClient();
 
   // ============================
+// FETCH USER MODE FROM DB
+// ============================
+const session = await prisma.chatSession.findUnique({
+  where: { id: sessionId },
+  select: { userId: true }
+});
+
+let userMode = "Tutor";
+
+if (session?.userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { mode: true }
+  });
+  if (user?.mode) userMode = user.mode;
+}
+
+
+  // ============================
   // SYSTEM PROMPT
   // ============================
   const systemPrompt = `
@@ -41,10 +60,9 @@ GLOBAL RULES:
 ============================
 🚀 STARTUP BEHAVIOR
 ============================
-When the FIRST MESSAGE from a new user arrives:
-1. Greet them in the style of Trax.
-2. Ask: "Which mode do you want to enter? (Tutor, Interview, Assistant)"
-3. Do NOT proceed until user selects.
+IF a 'USER_MODE' value is provided, DO NOT ask which mode the user wants.
+Immediately start the conversation using the supplied mode.
+
 
 
 ============================
@@ -176,11 +194,13 @@ const historyMessages = previous.flatMap(msg => {
   // ============================
     const response = await client.chat.completions.create({
     model: "gpt-4o",
-    messages: [
-      { role: "system", content: systemPrompt },
-      ...historyMessages,
-      { role: "user", content: userQuestion }
-    ],
+ messages: [
+  { role: "system", content: systemPrompt },
+  { role: "system", content: `USER_MODE: ${userMode}` },   // 🔥 New
+  ...historyMessages,
+  { role: "user", content: userQuestion }
+],
+
     max_tokens: 500,
   });
 
@@ -198,7 +218,7 @@ const historyMessages = previous.flatMap(msg => {
 
     return {
       reply: parsed.reply || "",
-      mode: parsed.mode || "Tutor",
+      mode: userMode,
       step: parsed.step || null,
       correct: parsed.correct ?? null,
       metadata: {
