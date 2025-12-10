@@ -36,9 +36,57 @@ export default function ChatSessionPage() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [customMinutes, setCustomMinutes] = useState("");
   const [customSeconds, setCustomSeconds] = useState("");
+  const [traxiusActive, setTraxiusActive] = useState(false);
+
   const [userMode, setUserMode] = useState<"Tutor" | "Interview" | "Assistant">(
     "Tutor"
   );
+
+      const notifyAIOfProtocol = async (mode: "activate" | "deactivate") => {
+  const command =
+    mode === "activate"
+      ? "TRAXIUS_PROTOCOL_ON"
+      : "TRAXIUS_PROTOCOL_OFF";
+
+  // Send hidden system signal to AI
+  const aiReply = await getBotResponse(command);
+
+  setMessages(prev => [
+    ...prev,
+    {
+      id: crypto.randomUUID(),
+      text: aiReply.reply,
+      from: "bot",
+      mode: aiReply.mode,
+      step: aiReply.step,
+      correct: aiReply.correct,
+      metadata: aiReply.metadata,
+    }
+  ]);
+};
+
+const sendProtocolCommand = async (command: "on" | "off") => {
+  const aiReply = await getBotResponse(
+    command === "on"
+      ? "TRAXIUS_PROTOCOL_ON"
+      : "TRAXIUS_PROTOCOL_OFF"
+  );
+
+  setMessages(prev => [
+    ...prev,
+    {
+      id: crypto.randomUUID(),
+      text: aiReply.reply,
+      from: "bot",
+      mode: aiReply.mode,
+      step: aiReply.step,
+      correct: aiReply.correct,
+      metadata: aiReply.metadata,
+    }
+  ]);
+};
+
+
 
   // Format seconds → MM:SS
   const formatTime = (sec: number) => {
@@ -259,40 +307,92 @@ export default function ChatSessionPage() {
   };
 
   // Send message
-  const handleSend = async () => {
-    if (!input.trim() || loading) return;
+const handleSend = async () => {
+  if (!input.trim() || loading) return;
 
-    const userMessage = {
+  const lower = input.toLowerCase();
+
+// 🔮 TRAXIUS PROTOCOL
+if (lower.includes("traxius protocol activate")) {
+  setTraxiusActive(true);
+
+  // UI system message
+  setMessages(prev => [
+    ...prev,
+    {
       id: crypto.randomUUID(),
-      text: input,
-      from: "user" as const,
-      mode: null,
-      step: null,
-      correct: null,
-      metadata: null,
-    };
+      text: "Traxius Protocol initialized. Standing by, Operator.",
+      from: "system",
+    },
+  ]);
 
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setLoading(true);
+  setInput("");
 
-    const aiReply = await getBotResponse(input);
+  // 🔥 Tell AI to switch persona
+  await sendProtocolCommand("on");
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        text: aiReply.reply,
-        from: "bot" as const,
-        mode: aiReply.mode,
-        step: aiReply.step,
-        correct: aiReply.correct,
-        metadata: aiReply.metadata,
-      },
-    ]);
+  return;
+}
 
-    setLoading(false);
+if (lower.includes("traxius protocol deactivate")) {
+  setTraxiusActive(false);
+
+  setMessages(prev => [
+    ...prev,
+    {
+      id: crypto.randomUUID(),
+      text: "Traxius Protocol disengaged. Returning to standard mentoring mode.",
+      from: "system",
+    },
+  ]);
+
+  setInput("");
+
+  // 🔥 Tell AI to revert persona
+  await sendProtocolCommand("off");
+
+  return;
+}
+
+
+  // ======================================================
+  // NORMAL MESSAGE FLOW (ONLY IF NOT A PROTOCOL COMMAND)
+  // ======================================================
+
+  const userMessage = {
+    id: crypto.randomUUID(),
+    text: input,
+    from: "user" as const,
+    mode: null,
+    step: null,
+    correct: null,
+    metadata: null,
   };
+
+  setMessages(prev => [...prev, userMessage]);
+
+  const messageCopy = input;  // avoid async mutation issue
+  setInput("");
+  setLoading(true);
+
+  const aiReply = await getBotResponse(messageCopy);
+
+  setMessages(prev => [
+    ...prev,
+    {
+      id: crypto.randomUUID(),
+      text: aiReply.reply,
+      from: "bot",
+      mode: aiReply.mode,
+      step: aiReply.step,
+      correct: aiReply.correct,
+      metadata: aiReply.metadata,
+    }
+  ]);
+
+  setLoading(false);
+};
+
 
   // Enter / Shift+Enter logic for textarea
   const handleKeyDown = (
@@ -344,15 +444,16 @@ export default function ChatSessionPage() {
     themeClasses[userMode] ?? themeClasses["Tutor"];
 
   return (
-    <div
-      className={`
-        flex flex-col h-screen 
-        text-gray-100 
-        transition-all duration-700 ease-in-out 
-        mode-animate
-        ${currentThemeClass}
-      `}
-    >
+<div
+  className={`
+    flex flex-col h-screen 
+    text-gray-100 
+    transition-all duration-700 ease-in-out 
+    mode-animate
+    ${currentThemeClass}
+  `}
+>
+
       {/* MODE SELECTOR (top bar) */}
       <div className="p-3 bg-black/50 border-b border-gray-800 flex justify-end backdrop-blur-sm">
         <select
@@ -597,7 +698,13 @@ export default function ChatSessionPage() {
         )}
 
         {/* INPUT BAR */}
-        <div className="p-4 border-t border-gray-800 bg-[#111] flex items-center gap-3 shadow-[0_-2px_10px_rgba(0,0,0,0.4)]">
+<div
+  className={`
+    p-4 border-t border-gray-800 bg-[#111]
+    flex items-center gap-3 shadow-[0_-2px_10px_rgba(0,0,0,0.4)]
+    ${traxiusActive ? "traxius-active" : ""}
+  `}
+>
           {/* Timer Icon */}
           <button
             onClick={() => setShowTimerTray((prev) => !prev)}

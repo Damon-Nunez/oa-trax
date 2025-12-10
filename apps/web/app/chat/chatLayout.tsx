@@ -155,15 +155,25 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
       )}
 
       {/* SIDEBAR */}
-      <aside className="bg-[#0a1a2b] text-gray-100 p-4 flex flex-col border-r border-[#05101a] w-72">
+      {/* SIDEBAR */}
+<aside
+  className={`
+    bg-[#0a1a2b] text-gray-100 p-4 flex flex-col border-r border-[#05101a]
+    w-72 z-30 h-screen transition-transform duration-300
+    fixed top-0 left-0
+    ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
+    lg:translate-x-0 lg:static
+  `}
+>
 
-        {/* Close button for mobile */}
-        <button
-          className="lg:hidden mb-3 text-left text-gray-300"
-          onClick={() => setMobileOpen(false)}
-        >
-          ✕ Close
-        </button>
+  {/* Close button for mobile */}
+  <button
+    className="lg:hidden mb-3 text-left text-gray-300"
+    onClick={() => setMobileOpen(false)}
+  >
+    ✕ Close
+  </button>
+
 
         {/* New Chat */}
         <button

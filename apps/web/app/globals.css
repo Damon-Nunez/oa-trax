@@ -64,3 +64,27 @@
 .mode-animate {
   animation: modeSwap 0.6s ease-out;
 }
+
+/* ============================================= */
+/* 🔮 TRAXIUS PROTOCOL — PURPLE GLOW ANIMATION   */
+/* ============================================= */
+/* 🔮 Traxius Protocol Glow (for chat input bar) */
+@keyframes traxiusPulse {
+  0% {
+    box-shadow: 0 0 8px rgba(168, 85, 247, 0.4),
+                0 0 18px rgba(168, 85, 247, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(168, 85, 247, 0.7),
+                0 0 35px rgba(168, 85, 247, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 8px rgba(168, 85, 247, 0.4),
+                0 0 18px rgba(168, 85, 247, 0.2);
+  }
+}
+
+.traxius-active {
+  animation: traxiusPulse 2s ease-in-out infinite;
+  border-radius: 1rem;
+}
