@@ -26,7 +26,7 @@ export default function SignupPage() {
       );
 
       // Redirect to login after success
-      router.push("/login");
+      router.push("/");
     } catch (err: any) {
       console.error(err);
       setError(
@@ -96,7 +96,7 @@ export default function SignupPage() {
         <p className="text-center mt-4 text-sm">
           Already have an account?{" "}
           <span
-            onClick={() => router.push("/login")}
+            onClick={() => router.push("/")}
             className="text-blue-600 font-medium hover:underline cursor-pointer"
           >
             Login
