@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
-// If you're not using ModeContext anymore, you can remove this import
-// import { useMode } from "../../ModeContext";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+
 
 const themeClasses: Record<string, string> = {
   Tutor: "bg-gradient-to-b from-[#0d1b2a] to-[#1b263b]",      // deep blue
@@ -15,7 +17,6 @@ const themeClasses: Record<string, string> = {
 export default function ChatSessionPage() {
   const { sessionId } = useParams();
   const router = useRouter();
-  // const { mode, setMode } = useMode();
 
   const [messages, setMessages] = useState<
     {
@@ -35,7 +36,9 @@ export default function ChatSessionPage() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [customMinutes, setCustomMinutes] = useState("");
   const [customSeconds, setCustomSeconds] = useState("");
-  const [userMode, setUserMode] = useState<"Tutor" | "Interview" | "Assistant">("Tutor");
+  const [userMode, setUserMode] = useState<"Tutor" | "Interview" | "Assistant">(
+    "Tutor"
+  );
 
   // Format seconds → MM:SS
   const formatTime = (sec: number) => {
@@ -84,7 +87,9 @@ export default function ChatSessionPage() {
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLTextAreaElement | null>(null);
 
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -197,9 +202,15 @@ export default function ChatSessionPage() {
           }
         );
 
-        // Ensure it matches the keys we use
-        const modeFromServer = res.data.mode as "Tutor" | "Interview" | "Assistant" | undefined;
-        if (modeFromServer && ["Tutor", "Interview", "Assistant"].includes(modeFromServer)) {
+        const modeFromServer = res.data.mode as
+          | "Tutor"
+          | "Interview"
+          | "Assistant"
+          | undefined;
+        if (
+          modeFromServer &&
+          ["Tutor", "Interview", "Assistant"].includes(modeFromServer)
+        ) {
           setUserMode(modeFromServer);
         }
       } catch (err) {
@@ -209,6 +220,15 @@ export default function ChatSessionPage() {
 
     fetchMode();
   }, [token]);
+
+  useEffect(() => {
+  if (!textRef.current) return;
+  const el = textRef.current;
+
+  el.style.height = "auto";                      // reset height
+  el.style.height = el.scrollHeight + "px";      // grow to fit content
+}, [input]);
+
 
   // Ask AI
   const getBotResponse = async (userInput: string) => {
@@ -274,8 +294,49 @@ export default function ChatSessionPage() {
     setLoading(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") handleSend();
+  // Enter / Shift+Enter logic for textarea
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLTextAreaElement>
+  ) => {
+    // SHIFT + ENTER → allow newline
+    if (e.key === "Enter" && e.shiftKey) {
+      return;
+    }
+
+    // ENTER without SHIFT → send
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  // Insert ``` code block like Slack
+  const handleInsertCodeBlock = () => {
+    const block = "```\n\n```";
+
+    setInput((prev) => {
+      const textarea = textRef.current;
+
+      // If ref missing, just append at end
+      if (!textarea) {
+        return (prev ? prev + "\n" : "") + block;
+      }
+
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+
+      const newValue =
+        prev.substring(0, start) + block + prev.substring(end);
+
+      // Move cursor *inside* the code block
+      setTimeout(() => {
+        const cursorPos = start + 4; // ```\n|
+        textarea.focus();
+        textarea.selectionStart = textarea.selectionEnd = cursorPos;
+      }, 0);
+
+      return newValue;
+    });
   };
 
   // Determine theme for current mode
@@ -283,23 +344,24 @@ export default function ChatSessionPage() {
     themeClasses[userMode] ?? themeClasses["Tutor"];
 
   return (
-<div
-  className={`
-    flex flex-col h-screen 
-    text-gray-100 
-    transition-all duration-700 ease-in-out 
-    mode-animate
-    ${currentThemeClass}
-  `}
->
-
-
+    <div
+      className={`
+        flex flex-col h-screen 
+        text-gray-100 
+        transition-all duration-700 ease-in-out 
+        mode-animate
+        ${currentThemeClass}
+      `}
+    >
       {/* MODE SELECTOR (top bar) */}
       <div className="p-3 bg-black/50 border-b border-gray-800 flex justify-end backdrop-blur-sm">
         <select
           value={userMode}
           onChange={async (e) => {
-            const newMode = e.target.value as "Tutor" | "Interview" | "Assistant";
+            const newMode = e.target.value as
+              | "Tutor"
+              | "Interview"
+              | "Assistant";
             setUserMode(newMode);
 
             try {
@@ -360,7 +422,14 @@ export default function ChatSessionPage() {
                 }
               `}
             >
-              {msg.text}
+          <ReactMarkdown
+  remarkPlugins={[remarkGfm]}
+>
+  {msg.text}
+</ReactMarkdown>
+
+
+
             </div>
           </div>
         ))}
@@ -545,28 +614,55 @@ export default function ChatSessionPage() {
             </span>
           )}
 
-          <input
-            type="text"
-            placeholder="Type a message..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            autoFocus
+          {/* Code-block button */}
+          <button
+            type="button"
+            onClick={handleInsertCodeBlock}
             className="
-              flex-1 
-              bg-[#0f0f0f] 
+              text-gray-300 
+              hover:text-white 
+              px-2 
+              py-1 
+              text-sm 
+              font-mono 
+              rounded-lg 
               border border-gray-700 
-              rounded-xl 
-              px-4 py-3 
-              text-gray-200 
-              placeholder-gray-500 
-              shadow-inner 
-              focus:outline-none 
-              focus:ring-2 
-              focus:ring-blue-600 
-              transition-all
+              hover:bg-[#222] 
+              transition-colors
             "
-          />
+            title="Insert code block"
+          >
+            {"</>"}
+          </button>
+
+          {/* Textarea input */}
+        <textarea
+  ref={textRef}
+  value={input}
+  onChange={(e) => setInput(e.target.value)}
+  onKeyDown={handleKeyDown}
+  placeholder="Type a message..."
+  className="
+    flex-1
+    bg-[#0f0f0f]
+    border border-gray-700
+    rounded-xl
+    px-4 py-3
+    text-gray-200
+    placeholder-gray-500
+    shadow-inner
+    focus:outline-none
+    focus:ring-2
+    focus:ring-blue-600
+    transition-all
+    resize-none
+    overflow-hidden
+    min-h-[40px]
+    max-h-[300px]
+  "
+/>
+
+
 
           <button
             onClick={handleSend}
