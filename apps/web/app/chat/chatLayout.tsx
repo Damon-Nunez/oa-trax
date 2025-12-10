@@ -104,7 +104,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   // Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
-    router.push("/login");
+    router.push("/");
   };
 
   // DELETE session handler
