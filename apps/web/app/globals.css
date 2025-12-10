@@ -64,3 +64,41 @@
 .mode-animate {
   animation: modeSwap 0.6s ease-out;
 }
+
+@keyframes traxius-pulse {
+  0% {
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.3),
+                0 0 20px rgba(168, 85, 247, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.6),
+                0 0 30px rgba(168, 85, 247, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.3),
+                0 0 20px rgba(168, 85, 247, 0.2);
+  }
+}
+
+.traxius-glow {
+  animation: traxius-pulse 2s infinite ease-in-out;
+  border-radius: 0.75rem; /* matches rounded-xl */
+}
+
+@keyframes overclock-pulse {
+  0% {
+    box-shadow: 0 0 12px rgba(255, 60, 60, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(255, 40, 40, 0.75);
+  }
+  100% {
+    box-shadow: 0 0 12px rgba(255, 60, 60, 0.25);
+  }
+}
+
+.overclock-glow {
+  animation: overclock-pulse 1.7s infinite ease-in-out;
+  border: 2px solid rgba(255, 60, 60, 0.6);
+  border-radius: 0.75rem;
+}

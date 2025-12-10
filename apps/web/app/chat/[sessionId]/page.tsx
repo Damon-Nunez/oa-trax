@@ -17,6 +17,9 @@ const themeClasses: Record<string, string> = {
 export default function ChatSessionPage() {
   const { sessionId } = useParams();
   const router = useRouter();
+  const [traxiusActive, setTraxiusActive] = useState(false);
+const [overclockActive, setOverclockActive] = useState(false);
+
 
   const [messages, setMessages] = useState<
     {
@@ -48,6 +51,22 @@ export default function ChatSessionPage() {
     const s = (sec % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   };
+
+  const handleModeChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const newMode = e.target.value as "Tutor" | "Interview" | "Assistant";
+  setUserMode(newMode);
+
+  try {
+    await axios.patch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/mode`,
+      { mode: newMode },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+  } catch (err) {
+    console.error("Error updating mode:", err);
+  }
+};
+
 
   // Start timer
   const startTimer = () => {
@@ -258,6 +277,90 @@ export default function ChatSessionPage() {
     }
   };
 
+  const renderTimerTray = () => (
+  <div
+    className="
+      absolute 
+      bottom-full left-4 right-4 
+      bg-[#111] 
+      border border-gray-800 
+      shadow-xl 
+      p-4 
+      rounded-xl 
+      space-y-3
+    "
+  >
+    <h3 className="font-semibold mb-2">Timer</h3>
+
+    {/* Preset buttons */}
+    <div className="flex mb-3">
+      <button
+        className="px-4 py-1.5 bg-[#1f1f1f] text-gray-200 rounded-l-lg border border-gray-700 hover:bg-[#2b2b2b]"
+        onClick={() => setTimeLeft(5 * 60)}
+      >
+        5 min
+      </button>
+
+      <button
+        className="px-4 py-1.5 bg-[#1f1f1f] text-gray-200 border-t border-b border-gray-700 hover:bg-[#2b2b2b]"
+        onClick={() => setTimeLeft(10 * 60)}
+      >
+        10 min
+      </button>
+
+      <button
+        className="px-4 py-1.5 bg-[#1f1f1f] text-gray-200 rounded-r-lg border border-gray-700 hover:bg-[#2b2b2b]"
+        onClick={() => setTimeLeft(20 * 60)}
+      >
+        20 min
+      </button>
+    </div>
+
+    {/* Custom entry */}
+    <div className="flex items-center gap-2 mb-3">
+      <input
+        type="number"
+        placeholder="min"
+        value={customMinutes}
+        onChange={(e) => setCustomMinutes(e.target.value)}
+        className="w-16 bg-[#0f0f0f] text-gray-200 border border-gray-700 rounded-lg px-2 py-1"
+      />
+
+      <input
+        type="number"
+        placeholder="sec"
+        value={customSeconds}
+        onChange={(e) => setCustomSeconds(e.target.value)}
+        className="w-16 bg-[#0f0f0f] text-gray-200 border border-gray-700 rounded-lg px-2 py-1"
+      />
+
+      <button
+        className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+        onClick={() => {
+          const total = (parseInt(customMinutes || "0") * 60) + parseInt(customSeconds || "0");
+          if (total > 0) setTimeLeft(total);
+        }}
+      >
+        Set
+      </button>
+    </div>
+
+    {/* Start / pause / reset */}
+    <div className="flex gap-3 mb-3">
+      <button onClick={startTimer} className="px-4 py-1 bg-blue-500 text-white rounded">Start</button>
+      <button onClick={pauseTimer} className="px-4 py-1 bg-yellow-500 text-white rounded">Pause</button>
+      <button onClick={resetTimer} className="px-4 py-1 bg-red-500 text-white rounded">Reset</button>
+    </div>
+
+    {timeLeft > 0 && (
+      <div className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-semibold">
+        🕒 {formatTime(timeLeft)}
+      </div>
+    )}
+  </div>
+);
+
+
   // Send message
   const handleSend = async () => {
     if (!input.trim() || loading) return;
@@ -341,58 +444,45 @@ export default function ChatSessionPage() {
 
   // Determine theme for current mode
   const currentThemeClass =
-    themeClasses[userMode] ?? themeClasses["Tutor"];
+  themeClasses[userMode] ?? themeClasses["Tutor"];
 
-  return (
+return (
+  <div
+    className={`
+      flex flex-col h-screen 
+      text-gray-100 
+      transition-all duration-700 ease-in-out 
+      mode-animate
+      ${currentThemeClass}
+    `}
+  >
+    {/* MODE SELECTOR */}
+    <div className="p-3 bg-black/50 border-b border-gray-800 flex justify-end backdrop-blur-sm">
+      <select
+        value={userMode}
+        onChange={handleModeChange}
+        className="border border-gray-700 bg-[#1e1e1e] text-gray-200 rounded px-2 py-1"
+      >
+        <option value="Tutor">Tutor</option>
+        <option value="Interview">Interview</option>
+        <option value="Assistant">Assistant</option>
+      </select>
+    </div>
+
+    {/* GLOW WRAPPER — must be flex-1 */}
     <div
       className={`
-        flex flex-col h-screen 
-        text-gray-100 
-        transition-all duration-700 ease-in-out 
-        mode-animate
-        ${currentThemeClass}
+        flex flex-col flex-1 
+        mx-4 my-4 
+        rounded-xl 
+        transition-all duration-700 
+        ${traxiusActive ? "traxius-glow" : ""}
+        ${overclockActive ? "overclock-glow" : ""}
       `}
     >
-      {/* MODE SELECTOR (top bar) */}
-      <div className="p-3 bg-black/50 border-b border-gray-800 flex justify-end backdrop-blur-sm">
-        <select
-          value={userMode}
-          onChange={async (e) => {
-            const newMode = e.target.value as
-              | "Tutor"
-              | "Interview"
-              | "Assistant";
-            setUserMode(newMode);
 
-            try {
-              await axios.patch(
-                `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/mode`,
-                { mode: newMode },
-                { headers: { Authorization: `Bearer ${token}` } }
-              );
-            } catch (err) {
-              console.error("Error updating mode:", err);
-            }
-          }}
-          className="
-            border border-gray-700 
-            bg-[#1e1e1e] 
-            text-gray-200 
-            rounded px-2 py-1 
-            focus:outline-none 
-            focus:ring-1 
-            focus:ring-blue-500 
-            cursor-pointer
-          "
-        >
-          <option value="Tutor">Tutor</option>
-          <option value="Interview">Interview</option>
-          <option value="Assistant">Assistant</option>
-        </select>
-      </div>
-
-      {/* Messages container */}
-      <div className="flex-1 overflow-y-auto p-6 flex flex-col space-y-3 bg-black/20">
+      {/* SCROLLABLE MESSAGES */}
+      <div className="flex-1 overflow-y-auto p-6 flex flex-col space-y-3 bg-black/20 rounded-xl">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -411,25 +501,19 @@ export default function ChatSessionPage() {
                 max-w-md 
                 break-words 
                 shadow-lg 
-                transition-all 
-                duration-200
+                transition-all duration-200
                 ${
                   msg.from === "user"
-                    ? "bg-[#3b3b3b] text-white self-end shadow-[0_0_10px_rgba(0,0,0,0.4)]"
+                    ? "bg-[#3b3b3b] text-white"
                     : msg.from === "system"
-                    ? "bg-[#555] text-white mx-auto shadow-[0_0_10px_rgba(0,0,0,0.35)]"
-                    : "bg-[#2e2e2e] text-gray-200 shadow-[0_0_10px_rgba(0,0,0,0.35)]"
+                    ? "bg-[#555] text-white mx-auto"
+                    : "bg-[#2e2e2e] text-gray-200"
                 }
               `}
             >
-          <ReactMarkdown
-  remarkPlugins={[remarkGfm]}
->
-  {msg.text}
-</ReactMarkdown>
-
-
-
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {msg.text}
+              </ReactMarkdown>
             </div>
           </div>
         ))}
@@ -445,244 +529,42 @@ export default function ChatSessionPage() {
         <div ref={messagesEndRef}></div>
       </div>
 
-      {/* TIMER + INPUT BAR AREA */}
+      {/* INPUT BAR */}
       <div className="relative">
-        {/* Timer Tray (only visible when expanded) */}
-        {showTimerTray && (
-          <div
-            className="
-              absolute 
-              bottom-full left-4 right-4 
-              bg-[#111] 
-              border border-gray-800 
-              shadow-xl 
-              p-4 
-              rounded-xl 
-              space-y-3
-            "
-          >
-            <h3 className="font-semibold mb-2">Timer</h3>
+        {showTimerTray && renderTimerTray()}
 
-            {/* Preset buttons */}
-            <div className="flex mb-3">
-              <button
-                className="
-                  px-4 py-1.5 
-                  bg-[#1f1f1f] 
-                  text-gray-200 
-                  rounded-l-lg 
-                  border border-gray-700 
-                  hover:bg-[#2b2b2b] 
-                  transition
-                "
-                onClick={() => setTimeLeft(5 * 60)}
-              >
-                5 min
-              </button>
-
-              <button
-                className="
-                  px-4 py-1.5 
-                  bg-[#1f1f1f] 
-                  text-gray-200 
-                  border-t border-b border-gray-700 
-                  hover:bg-[#2b2b2b] 
-                  transition
-                "
-                onClick={() => setTimeLeft(10 * 60)}
-              >
-                10 min
-              </button>
-
-              <button
-                className="
-                  px-4 py-1.5 
-                  bg-[#1f1f1f] 
-                  text-gray-200 
-                  rounded-r-lg 
-                  border border-gray-700 
-                  hover:bg-[#2b2b2b] 
-                  transition
-                "
-                onClick={() => setTimeLeft(20 * 60)}
-              >
-                20 min
-              </button>
-            </div>
-
-            {/* Custom time entry */}
-            <div className="flex items-center gap-2 mb-3">
-              <input
-                type="number"
-                placeholder="min"
-                value={customMinutes}
-                onChange={(e) => setCustomMinutes(e.target.value)}
-                className="
-                  w-16 
-                  bg-[#0f0f0f] 
-                  text-gray-200 
-                  border border-gray-700 
-                  rounded-lg 
-                  px-2 py-1 
-                  appearance-none 
-                  placeholder-gray-500 
-                  focus:outline-none 
-                  focus:ring-1 
-                  focus:ring-blue-500
-                "
-              />
-
-              <input
-                type="number"
-                placeholder="sec"
-                value={customSeconds}
-                onChange={(e) => setCustomSeconds(e.target.value)}
-                className="
-                  w-16 
-                  bg-[#0f0f0f] 
-                  text-gray-200 
-                  border border-gray-700 
-                  rounded-lg 
-                  px-2 py-1 
-                  appearance-none 
-                  placeholder-gray-500 
-                  focus:outline-none 
-                  focus:ring-1 
-                  focus:ring-blue-500
-                "
-              />
-
-              <button
-                className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-                onClick={() => {
-                  const m = parseInt(customMinutes || "0");
-                  const s = parseInt(customSeconds || "0");
-                  const total = m * 60 + s;
-                  if (total > 0) setTimeLeft(total);
-                }}
-              >
-                Set
-              </button>
-            </div>
-
-            {/* Start / Pause / Reset */}
-            <div className="flex gap-3 mb-3">
-              <button
-                className="px-4 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                onClick={startTimer}
-              >
-                Start
-              </button>
-              <button
-                className="px-4 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
-                onClick={pauseTimer}
-              >
-                Pause
-              </button>
-              <button
-                className="px-4 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                onClick={resetTimer}
-              >
-                Reset
-              </button>
-            </div>
-
-            {/* Countdown Pill */}
-            {timeLeft > 0 && (
-              <div className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-semibold">
-                🕒 {formatTime(timeLeft)}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* INPUT BAR */}
         <div className="p-4 border-t border-gray-800 bg-[#111] flex items-center gap-3 shadow-[0_-2px_10px_rgba(0,0,0,0.4)]">
-          {/* Timer Icon */}
-          <button
-            onClick={() => setShowTimerTray((prev) => !prev)}
-            className="text-gray-300 hover:text-white px-2 text-xl transition-transform hover:scale-110"
-            title="Timer"
-          >
-            🕒
-          </button>
+          <button onClick={() => setShowTimerTray(!showTimerTray)}>🕒</button>
 
-          {/* Countdown Pill (collapsed view) */}
           {timeLeft > 0 && !showTimerTray && (
             <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-semibold">
               🕒 {formatTime(timeLeft)}
             </span>
           )}
 
-          {/* Code-block button */}
-          <button
-            type="button"
-            onClick={handleInsertCodeBlock}
+          <button onClick={handleInsertCodeBlock} className="border px-2 py-1">{`</>`}</button>
+
+          <textarea
+            ref={textRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message..."
             className="
-              text-gray-300 
-              hover:text-white 
-              px-2 
-              py-1 
-              text-sm 
-              font-mono 
-              rounded-lg 
-              border border-gray-700 
-              hover:bg-[#222] 
-              transition-colors
+              flex-1 bg-[#0f0f0f] border border-gray-700 rounded-xl 
+              px-4 py-3 text-gray-200 resize-none overflow-hidden
+              min-h-[40px] max-h-[300px]
             "
-            title="Insert code block"
-          >
-            {"</>"}
-          </button>
+          />
 
-          {/* Textarea input */}
-        <textarea
-  ref={textRef}
-  value={input}
-  onChange={(e) => setInput(e.target.value)}
-  onKeyDown={handleKeyDown}
-  placeholder="Type a message..."
-  className="
-    flex-1
-    bg-[#0f0f0f]
-    border border-gray-700
-    rounded-xl
-    px-4 py-3
-    text-gray-200
-    placeholder-gray-500
-    shadow-inner
-    focus:outline-none
-    focus:ring-2
-    focus:ring-blue-600
-    transition-all
-    resize-none
-    overflow-hidden
-    min-h-[40px]
-    max-h-[300px]
-  "
-/>
-
-
-
-          <button
-            onClick={handleSend}
-            disabled={loading}
-            className="
-              bg-blue-600 
-              text-white 
-              px-5 py-2.5 
-              rounded-xl 
-              hover:bg-blue-500 
-              transition-all 
-              shadow-lg 
-              hover:shadow-blue-500/20
-              disabled:opacity-60
-            "
-          >
+          <button onClick={handleSend} disabled={loading} className="bg-blue-600 px-5 py-2.5 rounded-xl">
             Send
           </button>
         </div>
       </div>
+
     </div>
-  );
+  </div>
+);
+
 }
